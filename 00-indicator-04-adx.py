@@ -30,20 +30,29 @@ for ticker in stocks:
     ohlcv_data[ticker] = data
 
 
-def rsi(df, n=14):
+def atr(df, n=14):
     df =  df.copy()
-    df["change"] = df["Adj Close"] - df["Adj Close"].shift(1)
-    df["gain"] = np.where(df["change"] >= 0, df["change"], 0)
-    df["loss"] = np.where(df["change"] < 0, -1 * df["change"], 0)
-    df["avgGain"] = df["gain"].ewm(alpha=1/n, min_periods=n).mean()
-    df["avgLoss"] = df["loss"].ewm(alpha=1/n, min_periods=n).mean()
-    df["rs"] = df["avgGain"]/df["avgLoss"]
-    df["rsi"] = 100 - (100/(1+df["rs"]))
-    return df["rsi"]
+    df["H-L"] = df["High"] - df["Low"]
+    df["H-PC"] = abs(df["High"] - df["Adj Close"].shift(1))
+    df["L-PC"] = abs(df["Low"] - df["Adj Close"].shift(1))
+    df["TR"] = df[["H-L", "H-PC", "L-PC"]].max(axis=1, skipna=False)
+    df["ATR"] = df["TR"].ewm(com=n, min_periods=n).mean()
+    return df["ATR"]
+
+def adx(df, n=20):
+    df = df.copy()
+    df["ATR"] = atr(df, n)
+    df["upmove"] = df["High"] - df["High"].shift(1)
+    df["downmove"] = df["Low"].shift(1) - df["Low"]
+    df["+dm"] = np.where((df["upmove"]>df["downmove"]) & (df["upmove"] >0), df["upmove"], 0)
+    df["-dm"] = np.where((df["downmove"]>df["upmove"]) & (df["downmove"] >0), df["downmove"], 0)
+    df["+di"] = 100 * (df["+dm"]/df["ATR"]).ewm(alpha=1/n, min_periods=n).mean()
+    df["-di"] = 100 * (df["-dm"]/df["ATR"]).ewm(alpha=1/n, min_periods=n).mean()
+    df["ADX"] = 100* abs((df["+di"] - df["-di"])/(df["+di"] + df["-di"])).ewm(alpha=1/n, min_periods=n).mean()
+    return df["ADX"]
 
 for ticker in ohlcv_data:
     df = ohlcv_data[ticker]
-    df["rsi"] = rsi(df)
+    df["ADX"] = adx(df, 20)
 
 
-    
