@@ -29,8 +29,8 @@ for ticker in stocks:
 def atr(df, n=14):
     df =  df.copy()
     df["H-L"] = df["High"] - df["Low"]
-    df["H-PC"] = df["High"] - df["Adj Close"].shift(1)
-    df["L-PC"] = df["Low"] - df["Adj Close"].shift(1)
+    df["H-PC"] = abs(df["High"] - df["Adj Close"].shift(1))
+    df["L-PC"] = abs(df["Low"] - df["Adj Close"].shift(1))
     df["TR"] = df[["H-L", "H-PC", "L-PC"]].max(axis=1, skipna=False)
     df["ATR"] = df["TR"].ewm(com=n, min_periods=n).mean()
     return df["ATR"]
